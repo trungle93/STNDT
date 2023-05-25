@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/src/mask.py
 # Adapted by Trung Le
+# Created separate masks for contrastive mode
 
 import torch
 import torch.nn as nn
@@ -13,7 +15,6 @@ SUPPORTED_MODES = ["full", "timestep", "neuron", "timestep_only"]
 
 # Use a class so we can cache random mask
 class Masker:
-
     def __init__(self, train_cfg, device):
         self.update_config(train_cfg)
         if self.cfg.MASK_MODE not in SUPPORTED_MODES:
@@ -53,16 +54,20 @@ class Masker:
         Modifies batch OUT OF place!
         Modeled after HuggingFace's `mask_tokens` in `run_language_modeling.py`
         args:
-            batch: batch NxTxH
-            mask_ratio: ratio to randomly mask
-            mode: "full" or "timestep" - if "full", will randomly drop on full matrix, whereas on "timestep", will mask out random timesteps
-            mask: Optional mask to use
-            max_spikes: in case not zero masking, "mask token"
-            expand_prob: with this prob, uniformly expand. else, keep single tokens. UniLM does, with 40% expand to fixed, else keep single.
-            heldout_spikes: None
+            batch: heldin spikes with shape NxTxH
+            contrast_mode: if True, use configs for mask in contrastive phase
+            mask: optional custom mask to use
+            max_spikes: max number of spikes at a given timestep. In case not zero masking, "mask token"
+            expand_prob: expand mask with this probability
+            heldout_spikes: heldout portion
+            forward_spikes: forward portion
         returns:
-            batch: list of data batches NxTxH, with some elements along H set to -1s (we allow peeking between rates)
-            labels: true data (also NxTxH)
+            batch: masked heldin portion concatenated with all-zero heldout and forward portions
+            labels: unmasked heldin portion concatenated with true heldout and forward portions
+            masked_heldin: masked heldin portion
+            batch_full: consists of heldin, heldout, forward spikes all corrupted by mask
+            labels_full: unmasked heldin, heldout, forward portions
+            spikes_full: true heldin, heldout, forward portions
         """
         batch = batch.clone() # make sure we don't corrupt the input data (which is stored in memory)
 

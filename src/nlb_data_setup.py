@@ -1,18 +1,19 @@
-# curated from `basic_example.ipynb` in `nlb_tools`
-
-from nlb_tools.nwb_interface import NWBDataset
-from nlb_tools.make_tensors import make_train_input_tensors, make_eval_input_tensors, make_eval_target_tensors, save_to_h5, combine_h5
-from nlb_tools.evaluation import evaluate
+# Author: Trung Le
+# Set up train, val, test split from NLB NWB data
+# Curated from `basic_example.ipynb` in `nlb_tools` available at https://github.com/neurallatents/nlb_tools/blob/main/examples/tutorials/basic_example.ipynb
 
 import numpy as np
 import pandas as pd
 import h5py
-
 import argparse
 import logging
 logging.basicConfig(level=logging.INFO)
 
-## If necessary, download datasets from DANDI and put them in './data/'
+from third_party.nlb_tools.nwb_interface import NWBDataset
+from third_party.nlb_tools.make_tensors import make_train_input_tensors, make_eval_input_tensors, make_eval_target_tensors, save_to_h5, combine_h5
+from third_party.nlb_tools.evaluation import evaluate
+
+# # If necessary, download datasets from DANDI and put them in './data/'
 # !pip install dandi
 # !dandi download https://dandiarchive.org/dandiset/000128 # replace URL with URL for dataset you want
 # # URLS are:
@@ -25,6 +26,9 @@ logging.basicConfig(level=logging.INFO)
 # # - MC_Maze_Small: https://dandiarchive.org/dandiset/000140
 
 def get_parser():
+    r"""
+    Gets parsed arguments from command line
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "dataset-name",
@@ -35,6 +39,10 @@ def get_parser():
 
 
 def main():
+    r"""
+    Sets up train, val, test splits from NWB data files
+    Saves processed data splits to ./data/ in h5 format
+    """
     parser = get_parser()
     args = parser.parse_args()
     dataset_name = vars(args)['dataset-name']

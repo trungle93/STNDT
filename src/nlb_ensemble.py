@@ -1,6 +1,6 @@
-#%%
+# Author: Trung Le
+# Ensemble prediction rates from tuned checkpoints
 
-# 1. Load model and get rate predictions
 import os
 import os.path as osp
 from pathlib import Path
@@ -8,7 +8,6 @@ import sys
 module_path = os.path.abspath(os.path.join('..'))
 if module_path not in sys.path:
     sys.path.append(module_path)
-
 import time
 import h5py
 import matplotlib.pyplot as plt
@@ -17,23 +16,24 @@ import numpy as np
 import torch
 import torch.nn.functional as f
 from torch.utils import data
+import argparse
 
-from nlb_tools.evaluation import evaluate
-from nlb_tools.make_tensors import save_to_h5
-
+from third_party.nlb_tools.evaluation import evaluate
+from third_party.nlb_tools.make_tensors import save_to_h5
 from src.run import prepare_config
 from src.runner import Runner
 from src.dataset import SpikesDataset, DATASET_MODES
 from src.mask import UNMASKED_LABEL
-
-from scripts.analyze_utils import init_by_ckpt
-import argparse
+from src.analyze_utils import init_by_ckpt
 
 DATA_DIR = Path("./data/")
 ENSEMBLE_RESULTS_DIR = Path("./ensemble_results/")
 RAY_RESULTS_DIR = Path("./ray_results/")
 
 def get_parser():
+    r"""
+    Gets parsed arguments from command line
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "dataset-name",
@@ -44,6 +44,10 @@ def get_parser():
 
 
 def main():
+    r"""
+    Ensembles rate predictions from model checkpoints returned by hyperparameter search 
+    Saves ensembled rate predictions to ENSEMBLE_RESULTS_DIR in h5 format
+    """
     parser = get_parser()
     args = parser.parse_args()
     variant = vars(args)['dataset-name']
@@ -134,7 +138,7 @@ def main():
                 eval_rates_heldout_forward_list.append(eval_rates_heldout_forward)
 
 
-    max_ensemble_size = 50
+    max_ensemble_size = 2
     best_ensemble_metrics = -1e3
     sort_idx_full = np.argsort(np.array(cobps_list))[::-1].tolist()
     ckpt_path_list_sorted_full = [ckpt_path_list[i] for i in sort_idx_full]
@@ -174,7 +178,7 @@ def main():
 
     ##### test:
     print('getting ensembled prediction for test split ...')
-    test_data_file = osp.join(DATA_DIR, f"{variant}_test_full.h5")
+    test_data_file = f"{variant}_test_full.h5"
     train_rates_heldin_list = []
     train_rates_heldout_list = []
     eval_rates_heldin_list = []
@@ -240,6 +244,8 @@ def main():
             }
         }
 
+        if not Path(ENSEMBLE_RESULTS_DIR).exists():
+            os.mkdir(ENSEMBLE_RESULTS_DIR)
         save_to_h5(output_dict, osp.join(ENSEMBLE_RESULTS_DIR, f'{variant}_{ensemble_size}_{date}.h5'))
 
 

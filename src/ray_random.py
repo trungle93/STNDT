@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/ray_random.py
+# Adapted by Trung Le
+# Added hyperparameter tuning on co-bps
+
+
 # Src: Andrew's run_random_search in tune_tf2
 
 """
@@ -14,9 +21,12 @@ from ray.tune.schedulers import ASHAScheduler
 from ray.tune.suggest import skopt
 import torch
 
-from tune_models import tuneNDT
+from third_party.src.tune_models import tuneNDT
 
-from defaults import DEFAULT_CONFIG_DIR
+# from third_party.src.defaults import DEFAULT_CONFIG_DIR
+REPO_DIR = path.dirname(path.realpath(__file__))
+DEFAULT_CONFIG_DIR = path.join(REPO_DIR, 'configs')
+print('REPO_DIR', REPO_DIR)
 from src.config.default import flatten
 
 PBT_HOME = path.expanduser('./ray_results/')
@@ -31,6 +41,9 @@ DEFAULT_HP_DICT = {
 }
 
 def get_parser():
+    r"""
+    Gets parsed arguments from command line
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -106,6 +119,9 @@ def build_hp_dict(raw_json: dict):
     return hp_dict
 
 def launch_search(exp_config: Union[List[str], str], name: str, workers: int, gpus_per_worker: float, cpus_per_worker: float, eval_only: bool, samples: int, seed: int) -> None:
+    r"""
+    Launches hyperparameter search with co-bps objective
+    """
     # ---------- PBT I/O CONFIGURATION ----------
     # the directory to save PBT runs (usually '~/ray_results')
 

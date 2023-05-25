@@ -1,4 +1,7 @@
 
+# Author: Systems Neural Engineering Lab
+# Original file available at https://github.com/neurallatents/nlb_tools/blob/main/nlb_tools/make_tensors.py
+
 from .nwb_interface import NWBDataset
 from .chop import ChopInterface, chop_data, merge_chops
 from itertools import product

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/src/logger_wrapper.py
 
 # Adapted from Facebook Habitat Framework
 

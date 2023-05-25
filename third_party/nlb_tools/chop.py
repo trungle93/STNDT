@@ -1,3 +1,6 @@
+# Author: Systems Neural Engineering Lab
+# Original file available at https://github.com/neurallatents/nlb_tools/blob/main/nlb_tools/chop.py
+
 import os
 import h5py
 import logging

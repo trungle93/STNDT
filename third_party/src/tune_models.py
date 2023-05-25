@@ -1,3 +1,6 @@
+# Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/tune_models.py
+
 # Src: Andrew's tune_tf2
 
 import os

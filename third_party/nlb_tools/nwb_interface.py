@@ -1,3 +1,5 @@
+# Author: Systems Neural Engineering Lab
+# Original file available at https://github.com/neurallatents/nlb_tools/blob/main/nlb_tools/nwb_interface.py
 
 from pynwb import NWBFile, NWBHDF5IO, TimeSeries, ProcessingModule
 from pynwb.core import MultiContainerInterface, NWBDataInterface

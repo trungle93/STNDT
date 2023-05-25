@@ -1,10 +1,17 @@
+# Author: Joel Ye
+# Orginal file available at https://github.com/snel-repo/neural-data-transformers/blob/master/configs/area2_bump.yaml
+# Adapted by Trung Le
+# Modified configs for STNDT
+
 CHECKPOINT_DIR: "./ckpts/area2_bump/"
 TENSORBOARD_DIR: "./tb/area2_bump/"
 LOG_DIR: "./logs/area2_bump/"
+
 DATA:
-  DATAPATH: "./data/"
+  DATAPATH: "/home/STNDT/data/"
   TRAIN_FILENAME: 'area2_bump_full.h5'
   VAL_FILENAME: 'area2_bump_full.h5'
+
 MODEL:
   TRIAL_LENGTH: 0
   LEARNABLE_POSITION: False
@@ -20,6 +27,7 @@ MODEL:
   USE_CONTRAST_PROJECTOR: False
   CONTRAST_LAYER: 'embedder'
   LAMBDA: 1e-1
+
 TRAIN:
   LR:
     WARMUP: 5000
@@ -39,5 +47,4 @@ TRAIN:
   CONTRAST_MASK_SPAN_RAMP_START: 8000
   CONTRAST_MASK_SPAN_RAMP_END: 12000
 
-  # Aggressive regularization
   TUNE_HP_JSON: './configs/area2_bump.json'

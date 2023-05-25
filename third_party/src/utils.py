@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/src/utils.py
 
 import numpy as np
 import torch

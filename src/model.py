@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 # Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/src/model.py
 # Adapted by Trung Le
-import math
+# Added spatio-temporal attention and contrastive loss
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Transformer, TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, \
-    TransformerDecoderLayer, MultiheadAttention
-from torch.distributions import Poisson
+from torch.nn import TransformerEncoder, TransformerEncoderLayer, MultiheadAttention
 
-from src.utils import binary_mask_to_attn_mask
+from third_party.src.utils import binary_mask_to_attn_mask
 from src.mask import UNMASKED_LABEL
-
 
 # * Note that the TransformerEncoder and TransformerEncoderLayer were reproduced here for experimentation
 # * Only minor edits were actually made to the computation.
 
 class TransformerEncoderLayerWithHooks(TransformerEncoderLayer):
+    r"""
+    Extends Transformer Encoder Layer class from PyTorch with custom configs and spatial attention
+    """
     def __init__(self, config, d_model, trial_length, device=None, **kwargs):
         super().__init__(
             d_model,
@@ -82,23 +84,31 @@ class TransformerEncoderLayerWithHooks(TransformerEncoderLayer):
         return (*attn_res, torch.tensor(0, device=src.device, dtype=torch.float))
 
     def spatial_attend(self, src, context_mask=None, **kwargs):
+        r"""
+        Attends over spatial dimension
+        Args:
+            src: spatiotemporal neural population input
+            context_mask: spatial context mask
+        Returns:
+            spatiotemporal neural population activity transformed by spatial attention
+        """
         attn_res = self.spatial_self_attn(src, src, src, attn_mask=context_mask, **kwargs)
         return (*attn_res, torch.tensor(0, device=src.device, dtype=torch.float))
 
     def forward(self, src, spatial_src, src_mask=None, spatial_src_mask=None, src_key_padding_mask=None, **kwargs):
         # type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
-        r"""Pass the input through the encoder layer.
-
+        r"""Passes population activity representation through transformer encoder layer.
         Args:
-            src: the sequence to the encoder layer (required).
-            src_mask: the mask for the src sequence (optional).
-            src_key_padding_mask: the mask for the src keys per batch (optional).
-
+            src: temporal representation of population activity (required).
+            spatial_src: spatial representation of population activity (required).
+            src_mask: mask for src (optional).
+            spatial_src_mask: mask for spatial_src (optional).
+            src_key_padding_mask: mask for src keys per batch (optional).
         Returns:
-            src: L, N, E (time x batch x neurons)
-            weights: N, L, S (batch x target time x source time)
+            src: output of transformer encoder layer
+            spatial_weights: spatial attention weights 
+            t_weights: temporal attention weights
         """
-
         residual = src
         if self.config.PRE_NORM:
             src = self.norm1(src)
@@ -150,9 +160,9 @@ class TransformerEncoderLayerWithHooks(TransformerEncoderLayer):
 
 
 class TransformerEncoderWithHooks(TransformerEncoder):
-    r""" Hooks into transformer encoder.
+    r"""
+    Extends Transformer Encoder class from PyTorch with custom configs and spatial attention
     """
-
     def __init__(self, encoder_layer, norm=None, config=None, num_layers=None, device=None, src_pos_encoder=None,
                  spatial_pos_encoder=None):
         super().__init__(encoder_layer, config.NUM_LAYERS, norm)
@@ -174,6 +184,20 @@ class TransformerEncoderWithHooks(TransformerEncoder):
 
     def forward(self, src, spatial_src, mask=None, spatial_mask=None, return_outputs=False, return_weights=False,
                 **kwargs):
+        r"""Passes population activity input through transformer encoder.
+        Args:
+            src: temporal representation of population activity (required).
+            spatial_src: spatial representation of population activity (required).
+            mask: mask for src (optional).
+            spatial_src_mask: mask for spatial_src (optional).
+            return_outputs: return output if True
+            return_weights: return weights if True
+        Returns:
+            return_src: output of transformer encoder
+            layer_outputs: output of encoder layers
+            layer_weights: layer temporal and spatial weights
+            total_layer_cost: total layer cost (legacy)
+        """
         value = src
         src = self.split_src(src)
         layer_outputs = []
@@ -204,9 +228,9 @@ class TransformerEncoderWithHooks(TransformerEncoder):
         return return_src, layer_outputs, layer_weights, total_layer_cost
 
 
-class NeuralDataTransformer(nn.Module):
+class STNDT(nn.Module):
     r"""
-        Transformer encoder-based dynamical systems decoder. Trained on MLM loss. Returns loss and predicted rates.
+    Spatiotemporal Neural Data Transformer class. Extends NDT with spatiotemporal attention and contrastive training.
     """
 
     def __init__(self, config, trial_length, num_neurons, device, max_spikes):
@@ -394,8 +418,16 @@ class NeuralDataTransformer(nn.Module):
         self.src_decoder[0].bias.data.zero_()
         self.src_decoder[0].weight.data.uniform_(-initrange, initrange)
 
-    # adapted from https://github.com/sthalles/SimCLR.git
     def info_nce_loss(self, features):
+        r"""
+        Prepares positive and negative samples for contrastive learning to be used for InfoNCE loss
+        Adapted from https://github.com/sthalles/SimCLR.git
+        Args:
+            features: two views (augmentations) of population input batch
+        Returns:
+            logits: matrix of positive and negative similarities
+            labels: zeros, indicating that positive sample is at the first column
+        """
         batch_size = features.shape[0] / 2
         labels = torch.cat([torch.arange(batch_size) for i in range(self.n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
@@ -419,6 +451,22 @@ class NeuralDataTransformer(nn.Module):
 
     def forward(self, src, mask_labels, contrast_src1=None, contrast_src2=None, val_phase=False, **kwargs):
         src = src.float()
+        r"""
+        Forward pass of STNDT.
+        Args:
+            src: neural population activity input
+            mask_labels: labels of masked input
+            contrast_src1: first augmented view of neural population activity
+            contrast_src2: second augmented view of neural population activity
+            val_phase: set to True if in validation phase
+        Returns:
+            loss: Poisson NLL loss and/or contrastive loss
+            masked_decoder_loss: Poisson NLL loss
+            contrast_loss: contrastive loss
+            decoder_rates: prediction rates
+            layer_weights: temporal and spatial attention weights
+            layer_outputs: outputs from transformer encoder layers
+        """
         if contrast_src1 is not None and contrast_src2 is not None:
             contrast_src1 = contrast_src1.float()
             contrast_src2 = contrast_src2.float()
@@ -537,7 +585,7 @@ class NeuralDataTransformer(nn.Module):
 
 class PositionalEncoding(nn.Module):
     r"""
-    ! FYI - needs even d_model if not learned.
+    Positional Encoding module to encode temporal and spatial identity
     """
 
     def __init__(self, cfg, trial_length, d_model, device):

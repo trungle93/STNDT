@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/src/runner.py
 # Adapted by Trung Le
+# Adapted training and evaluation pipeline with spatiotemporal attention and contrastive learning
+# Added logging for co-bps metrics
 
 import os
 import os.path as osp
-
 import time
 from typing import Any, Dict, List, Optional
-
 from sklearn.metrics import r2_score, explained_variance_score
 import h5py
 import numpy as np
@@ -16,15 +17,12 @@ import torch.nn as nn
 import torch.optim as optim
 from pytorch_transformers import AdamW, WarmupCosineSchedule
 from torch.utils import data
-
 from scipy.special import gammaln
+from torch.utils.tensorboard import SummaryWriter as TensorboardWriter
 
-from src import (
-    get_model_class, is_learning_model, is_input_masked_model,
-    TensorboardWriter,
-    create_logger,
-)
-from src.utils import get_inverse_sqrt_schedule
+from third_party.src.logger_wrapper import create_logger
+from third_party.src.utils import get_inverse_sqrt_schedule
+from src.model import STNDT
 from src.dataset import DATASET_MODES, SpikesDataset
 from src.mask import Masker, UNMASKED_LABEL, DEFAULT_MASK_VAL
 
@@ -123,7 +121,7 @@ class Runner:
 
     def setup_model(self, device):
         r""" Creates model and assigns to device """
-        self.model = get_model_class(self.config.MODEL.NAME)(
+        self.model = STNDT(
             self.config.MODEL,
             self.trial_length,
             self.num_neurons,
@@ -289,23 +287,23 @@ class Runner:
 
     def load_optimizer(self, num_hidden):
         train_cfg = self.config.TRAIN
-        if is_learning_model(self.config.MODEL.NAME):
-            self.optimizer = AdamW(
-                list(filter(lambda p: p.requires_grad, self._get_parameters())),
-                lr=train_cfg.LR.INIT,
-                weight_decay=train_cfg.WEIGHT_DECAY,
-                eps=train_cfg.EPS,
-            )
+        # if is_learning_model(self.config.MODEL.NAME):
+        self.optimizer = AdamW(
+            list(filter(lambda p: p.requires_grad, self._get_parameters())),
+            lr=train_cfg.LR.INIT,
+            weight_decay=train_cfg.WEIGHT_DECAY,
+            eps=train_cfg.EPS,
+        )
 
-            self.logger.info(
-                "number of trainable parameters: {}".format(
-                    sum(
-                        param.numel()
-                        for param in self.model.parameters()
-                        if param.requires_grad
-                    )
+        self.logger.info(
+            "number of trainable parameters: {}".format(
+                sum(
+                    param.numel()
+                    for param in self.model.parameters()
+                    if param.requires_grad
                 )
             )
+        )
 
         if self.optimizer is not None and train_cfg.LR.SCHEDULE:
             if train_cfg.LR.SCHEDULER == "cosine":
@@ -398,7 +396,7 @@ class Runner:
                 spikes,
                 contrast_mode=False,
                 max_spikes=self.max_spikes,
-                should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                should_mask=True,
                 expand_prob=expand_prob,
                 heldout_spikes=heldout_spikes,
                 forward_spikes=forward_spikes
@@ -408,7 +406,7 @@ class Runner:
                     spikes,
                     contrast_mode=True,
                     max_spikes=self.max_spikes,
-                    should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                    should_mask=True,
                     expand_prob=expand_prob,
                     heldout_spikes=heldout_spikes,
                     forward_spikes=forward_spikes
@@ -417,7 +415,7 @@ class Runner:
                     spikes,
                     contrast_mode=True,
                     max_spikes=self.max_spikes,
-                    should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                    should_mask=True,
                     expand_prob=expand_prob,
                     heldout_spikes=heldout_spikes,
                     forward_spikes=forward_spikes
@@ -506,7 +504,7 @@ class Runner:
                         spikes,
                         contrast_mode=False,
                         max_spikes=self.max_spikes,
-                        should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                        should_mask=True,
                         heldout_spikes=heldout_spikes,
                         forward_spikes=forward_spikes,
                     )
@@ -515,7 +513,7 @@ class Runner:
                             spikes,
                             contrast_mode=True,
                             max_spikes=self.max_spikes,
-                            should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                            should_mask=True,
                             expand_prob=expand_prob,
                             heldout_spikes=heldout_spikes,
                             forward_spikes=forward_spikes,
@@ -524,7 +522,7 @@ class Runner:
                             spikes,
                             contrast_mode=True,
                             max_spikes=self.max_spikes,
-                            should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                            should_mask=True,
                             expand_prob=expand_prob,
                             heldout_spikes=heldout_spikes,
                             forward_spikes=forward_spikes,
@@ -705,10 +703,12 @@ class Runner:
         Args:
             checkpoint_path: path of checkpoint (will use model on runner if not provided)
             save_path: Path to save activations at (optional). Does not save if nothing provided
-
+            mode: train/val/test
         Returns:
-            rates: ! confirm shape
-            layer_outputs: ! confirm shape
+            pred_rates: rates prediction
+            all_s_attentions: spatial attention weights of all transformer layers
+            all_s_attentions: temporal attention weights of all transformer layers
+            layer_outputs: outputs of all transformer layers
         """
         self.logger.info(f"Getting rates...")
         if self.device is None:

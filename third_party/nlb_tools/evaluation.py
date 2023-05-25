@@ -1,3 +1,6 @@
+# Author: Systems Neural Engineering Lab
+# Original file available at https://github.com/neurallatents/nlb_tools/blob/main/nlb_tools/evaluation.py
+
 import numpy as np
 import h5py
 from sklearn.linear_model import Ridge

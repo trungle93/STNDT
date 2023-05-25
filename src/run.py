@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 # Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/src/run.py
 # Adapted by Trung Le
+# Cleaned up legacy code
 
 from typing import List, Union
-import os
 import os.path as osp
 import shutil
 import random
-
 import argparse
 import numpy as np
 import torch
 
 from src.config.default import get_config
 from src.runner import Runner
-from src import create_logger
 
 DO_PRESERVE_RUNS = False
 

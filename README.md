@@ -10,13 +10,19 @@ conda env create -f environment.yml
 ```
 
 ## Data Setup
-Run `data/nlb_data_setup.py` with the name of the dataset of interest to generate train, val and test data in HDF5 format:
+Download NLB data by running the following script:
 ```
-python -u data/nlb_data_setup.py <dataset_name>
+./scripts/download_nlb_data.sh
+````
+Refer to instructions in the script to specify the URL of the dataset you want to download.
+
+Next, run `src/nlb_data_setup.py` with the name of the dataset of interest to generate train, val and test data in HDF5 format:
+```
+python -u src/nlb_data_setup.py <dataset_name>
 ```
 For example, to generate data for `MC_Maze`, use:
 ```
-python -u data/nlb_data_setup.py mc_maze
+python -u src/nlb_data_setup.py mc_maze
 ```
 
 ## Training + Evaluation
@@ -33,11 +39,16 @@ This script includes commands to launch a Bayesian hyperparameter optimization a
 ## Citation
 If you find our code helpful, please cite our paper:
 ```
-@article{lestndt,
-  title={STNDT: Modeling Neural Population Activity with Spatiotemporal Transformers},
-  author={Le, Trung and Shlizerman, Eli},
-  journal={Advances in Neural Information Processing Systems},
-  year={2022}
+@inproceedings{NEURIPS2022_72163d1c,
+ author = {Le, Trung and Shlizerman, Eli},
+ booktitle = {Advances in Neural Information Processing Systems},
+ editor = {S. Koyejo and S. Mohamed and A. Agarwal and D. Belgrave and K. Cho and A. Oh},
+ pages = {17926--17939},
+ publisher = {Curran Associates, Inc.},
+ title = {STNDT: Modeling Neural Population Activity with Spatiotemporal Transformers},
+ url = {https://proceedings.neurips.cc/paper_files/paper/2022/file/72163d1c3c1726f1c29157d06e9e93c1-Paper-Conference.pdf},
+ volume = {35},
+ year = {2022}
 }
 ```
 This repo uses the following repositories and works. Please include their citations when using STNDT:
@@ -65,6 +76,18 @@ This repo uses the following repositories and works. Please include their citati
   year={2021}
 }
 ```
+[AEStudio's NLB Challenge Phase 1 Winning Model](https://github.com/agencyenterprise/ae-nlb-2021.git):
+```
+@misc{aestudio,
+  author = {Sleiter, Darin and Schoenfield, Joshua and Vaiana, Mike},
+  title = {ae-nlb-2021},
+  year = {2021},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/agencyenterprise/ae-nlb-2021.git}},
+  commit = {39d0de79aef2b997dcb419a9d3f9cd81180ee57b}
+}
+```
 [Exploring SimCLR: A Simple Framework for Contrastive Learning of Visual Representations](https://github.com/sthalles/SimCLR.git):
 ```
 @article{
@@ -74,6 +97,15 @@ This repo uses the following repositories and works. Please include their citati
   journal={https://sthalles.github.io},
   year={2020}
   url={https://sthalles.github.io/simple-self-supervised-learning/}
+}
+```
+[Transformers without Tears: Improving the Normalization of Self-Attention](https://github.com/tnq177/transformers_without_tears):
+```
+@inproceedings{nguyen2019transformers,
+  title={Transformers without Tears: Improving the Normalization of Self-Attention},
+  author={Nguyen, Toan Q and Salazar, Julian},
+  booktitle={Proceedings of the 16th International Conference on Spoken Language Translation},
+  year={2019}
 }
 ```
 [Improving transformer optimization through better initialization](https://github.com/layer6ai-labs/T-Fixup.git):

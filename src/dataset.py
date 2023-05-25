@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # Author: Joel Ye
+# Original file available at https://github.com/snel-repo/neural-data-transformers/blob/master/src/dataset.py
 # Adapted by Trung Le
-import os.path as osp
+# Changed key names for NLB data dictionary
 
+import os
+import os.path as osp
 import h5py
 import numpy as np
 import torch
 from torch.utils import data
 
-from src.utils import merge_train_valid
+from third_party.src.utils import merge_train_valid
 
 class DATASET_MODES:
     train = "train"
