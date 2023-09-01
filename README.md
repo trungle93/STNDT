@@ -1,4 +1,4 @@
-Source code for the NeurIPS 2022 paper [STNDT: Modeling Neural Population Activity with Spatiotemporal Transformers](https://arxiv.org/abs/2206.04727)
+Source code for the NeurIPS 2022 paper [STNDT: Modeling Neural Population Activity with Spatiotemporal Transformers](https://papers.nips.cc/paper_files/paper/2022/file/72163d1c3c1726f1c29157d06e9e93c1-Paper-Conference.pdf)
 # Spatio-Temporal Neural Data Transformers
 
 This repo contains Python scripts to train and evaluate Spatio-Temporal Neural Data Transformers (STNDT). STNDT is developed based upon [Neural Data Transformers](https://github.com/snel-repo/neural-data-transformers) and allows the transformer to learn both the spatial coordination between neurons and the temporal progression of the population activity. STNDT is enhanced with a contrastive loss to encourage consistent firing rate predictions under different noise corruption. Evaluation of STNDT performance and other state-of-the-art methods can be found on [Neural Latents Benchmark Challenge 2021](https://neurallatents.github.io/).
